@@ -1,22 +1,53 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import MovieCard from "../components/MovieCard"
+import { searchMovies, getPopularMovies } from "../services/api.js";
 import "../css/Home.css"
 
 
 function Home() {
     const [searchQuery, setSearchQuery] = useState("");
+    const [movies, setMovies] = useState([]);
+    const [error, setError] = useState(null)
+    const [loading, setLoading] = useState(true)
 
-    const movies = [
-        {id: 1, title: "Good Will Hunting", release_date: 1997},
-        {id: 2, title: "Ready Player One", release_date: 2018},
-        {id: 3, title: "The Suicide Squad", release_date: 2021},
-    ]
+    useEffect(()=> {
+        const loadPopularMovies = async () => {
+            try{
+                const popularMovies = await getPopularMovies();
+                setMovies(popularMovies)
+            }
+            catch(error){
+                console.log(error);
+                setError("Failed to load movies...")
+            }
+            finally{
+                setLoading(false)
+            }
+        }
 
-    const handleSearch = (e) => {
+        loadPopularMovies()
+    }, [])
+
+    const handleSearch = async (e) => {
         e.preventDefault();
-        
-    };
+        if(!searchQuery.trim()) return;
+        if(loading) return;
 
+        setLoading(true)
+
+        try {
+            const searchResult = await searchMovies(searchQuery)
+
+            setMovies(searchResult)
+            setError(null)
+        } catch (error) {
+            console.log(error);
+            setError("Failed to search movies...");
+        }
+        finally{
+            setLoading(false)
+        }
+    };
   return (
     <div className="home">
         <form onSubmit={handleSearch} className="search-form">
@@ -27,8 +58,9 @@ function Home() {
             <button type="submit" className="search-btn">Search</button>
         </form>
 
+        {error && <div className="error-message"> {error} </div>}
 
-        <div className="movies-grid">
+        {loading ? <div className="loading"> Loading..</div> :<div className="movies-grid">
             {movies.map((movie) =>
                 // (movie) => (movie.title.toLowerCase().startsWith(searchQuery) &&
                 
@@ -36,7 +68,8 @@ function Home() {
             movie={movie} 
             key={movie.id}/>)
             )}
-        </div>
+        </div>}
+        
     </div>
   )
 }
